@@ -43,7 +43,7 @@ export function NavBar() {
 
   const navLinks = [
     { href: "/", label: "Dashboard" },
-    { href: "/alert-history", label: "Alert History" }, // Corrected href to match new page
+    { href: "/AlertHistory", label: "Alert History" }, // Corrected href to match new page
     { href: "/AreaManagement", label: "Area" },
     { href: "/DroneManagement", label: "Drone" },
     { href: "/SensorManagement", label: "Sensor" },
