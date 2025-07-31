@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import "leaflet/dist/leaflet.css";
-import type { LatLngBoundsLiteral } from "leaflet";
-import { baseUrl } from "@/lib/config";
 import L from "leaflet";
-
+import "leaflet/dist/leaflet.css";
+import { baseUrl } from "@/lib/config.js";
 import { Button } from "./ui/button";
 import { SensorSettings } from "./sensor-settings";
-import { CloudLightning } from "lucide-react";
 
 interface Sensor {
   __v: number;
@@ -20,107 +17,59 @@ interface Sensor {
   sensor_id: string;
 }
 
-type Area = {
-  name: string;
-  area_id: string;
-};
-
 interface MapDisplayProps {
   setCurrentSensor: (sensor: Sensor | null) => void;
 }
 
 export default function MapDisplay({ setCurrentSensor }: MapDisplayProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
-  const leafletMapRef = useRef<any>(null);
-  const [sensors, setSensors] = useState<any[]>([]);
+  const leafletMapRef = useRef<L.Map | null>(null);
+  const droneRef = useRef<L.Marker | null>(null);
+  const polylineRef = useRef<L.Polyline | null>(null);
+  const pathRef = useRef<L.LatLng[]>([]);
+  const [sensors, setSensors] = useState<Sensor[]>([]);
   const [clickMode, setClickMode] = useState(false);
   const clickModeRef = useRef(false);
   const [clickAddSensor, setClickAddSensor] = useState(false);
   const clickAddSensorRef = useRef(false);
-
   const [addSensorLat, setAddSensorLat] = useState(0);
   const [addSensorLng, setAddSensorLng] = useState(0);
-
   const [sensorAddSuccess, setSensorAddSuccess] = useState(false);
   const [refreshSensorList, setRefreshSensorList] = useState(false);
-
-  // Tiles 1
-  // const DEFAULT_LAT = 28.448;
-  // const DEFAULT_LNG = 77.0406;
-
-  // const bounds: LatLngBoundsLiteral = [
-  //   [28.4479, 77.0397],
-  //   [28.4481, 77.0415],
-  // ];
-
-  // Tiles 2
-  // const DEFAULT_LAT = 28.523798;
-  // const DEFAULT_LNG = 77.076847;
-
-  // const bounds: LatLngBoundsLiteral = [
-  //   [28.44961, 77.054527],
-  //   [28.598357, 77.099167],
-  // ];
-
-  const Center_Position = {
-    "plot 93": {
-      lat: 28.44920097252899,
-      lng: 77.03902458008703,
-      bounds: [
-        [28.451235968630048, 77.03347643073973],
-        [28.447165976427932, 77.04457272943434],
-      ],
-    },
-    "chattarpur demo site": {
-      lat: 28.425123,
-      lng: 77.216237,
-      bounds: [
-        [28.470173, 77.216237],
-        [28.380073, 77.216237],
-      ],
-    },
-  };
-
-  // const DEFAULT_LAT = 25.244991455141024;
-  // const DEFAULT_LNG = 78.4679457080173;
-
-  // const bounds: LatLngBoundsLiteral = [
-  //   [25.26335105506797, 78.46445308103547],
-  //   [25.226631855214077, 78.47143833499914],
-  // ];
 
   const DEFAULT_LAT = 32.7976667;
   const DEFAULT_LNG = 74.9077222;
 
-  const bounds: LatLngBoundsLiteral = [
+  const bounds: L.LatLngBoundsLiteral = [
     [32.808829, 74.890582],
     [32.770696, 74.928948],
   ];
 
-  // ✅ Define the icon globally so it works inside any scope
   const sensorIcon = L.icon({
     iconUrl: "/icons/sensor_icon3.png",
-
     iconSize: [40, 40],
     iconAnchor: [20, 40],
     popupAnchor: [0, -40],
   });
 
+  const droneIcon = L.icon({
+    iconUrl: "/drone.png",
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+  });
+
   useEffect(() => {
     const fetchSensors = async () => {
       try {
-        console.log("Sensor Refresh Triggered");
         const res = await fetch(`${baseUrl}/sensors/`);
         const response = await res.json();
 
         if (response.status && response.data) {
-          const data = response.data;
-          setSensors(data || []);
-          console.log("Sensors fetched Successfully", data);
+          const data: Sensor[] = response.data;
+          setSensors(data);
 
-          // Check if the map is initialized, if not initialize it
           if (mapRef.current && !leafletMapRef.current) {
-            leafletMapRef.current = L.map(mapRef.current, {
+            const map = L.map(mapRef.current, {
               center: [DEFAULT_LAT, DEFAULT_LNG],
               zoom: 15,
               minZoom: 15,
@@ -129,69 +78,76 @@ export default function MapDisplay({ setCurrentSensor }: MapDisplayProps) {
               maxBoundsViscosity: 1.0,
             });
 
-            // Add the tile layer to the map
             L.tileLayer("/jammu/{z}/{x}/{y}.jpg", {
               tileSize: 256,
               noWrap: true,
               bounds: bounds,
               attribution: "Offline Tiles",
               errorTileUrl: "/placeholder.jpg",
-            }).addTo(leafletMapRef.current);
+            }).addTo(map);
+
+            leafletMapRef.current = map;
+
+            //set drone default coordinates
+            const droneMarker = L.marker([DEFAULT_LAT, DEFAULT_LNG], {
+              icon: droneIcon,
+            }).addTo(map);
+
+            droneRef.current = droneMarker;
+
+            const polyline = L.polyline([], {
+              color: "red",
+              weight: 5,
+              opacity: 0.8,
+              smoothFactor: 1,
+            }).addTo(map);
+
+            polylineRef.current = polyline;
+
+            map.on("click", (e: any) => {
+              if (clickModeRef.current) {
+                if (clickAddSensorRef.current) {
+                  setAddSensorLat(e.latlng.lat);
+                  setAddSensorLng(e.latlng.lng);
+                } else {
+                  setCurrentSensor({
+                    __v: 0,
+                    _id: "",
+                    area_id: "",
+                    latitude: e.latlng.lat,
+                    longitude: e.latlng.lng,
+                    name: "New Sensor",
+                    sensor_id: "",
+                  });
+                }
+
+                L.marker([e.latlng.lat, e.latlng.lng], {
+                  icon: sensorIcon,
+                }).addTo(map);
+              }
+            });
           }
 
-          // Clear existing markers before adding new ones
           leafletMapRef.current?.eachLayer((layer: any) => {
-            if (layer instanceof L.Marker) {
-              leafletMapRef.current.removeLayer(layer);
+            if (layer instanceof L.Marker && layer !== droneRef.current) {
+              leafletMapRef.current?.removeLayer(layer);
             }
           });
 
-          // Add markers for the fetched sensors
-          data.forEach((sensor: Sensor) => {
+          data.forEach((sensor) => {
             if (!isNaN(sensor.latitude) && !isNaN(sensor.longitude)) {
               const marker = L.marker([sensor.latitude, sensor.longitude], {
                 icon: sensorIcon,
               })
-                .addTo(leafletMapRef.current)
+                .addTo(leafletMapRef.current!)
                 .bindPopup(sensor.name);
 
-              marker.on("click", () => {
-                console.log("Sensor clicked:", sensor);
-                // setCurrentSensor(sensor);
-                setCurrentSensor({ ...sensor });
-              });
+              marker.on("click", () => setCurrentSensor({ ...sensor }));
             }
           });
 
-          // Add click event listener to the map
-          leafletMapRef.current?.on("click", (e: any) => {
-            if (clickModeRef.current) {
-              console.log("Clicked LatLng:", e.latlng.lat, e.latlng.lng);
-              if (clickAddSensorRef.current) {
-                setAddSensorLat(e.latlng.lat);
-                setAddSensorLng(e.latlng.lng);
-              } else {
-                setCurrentSensor({
-                  __v: 0,
-                  _id: "",
-                  area_id: "",
-                  latitude: e.latlng.lat,
-                  longitude: e.latlng.lng,
-                  name: "New Sensor",
-                  sensor_id: "",
-                });
-              }
-
-              // Add a marker at the clicked position
-              L.marker([e.latlng.lat, e.latlng.lng], {
-                icon: sensorIcon,
-              }).addTo(leafletMapRef.current);
-            }
-          });
-
-          // Invalidate the size of the map to ensure it's rendered properly
           requestAnimationFrame(() => {
-            leafletMapRef.current.invalidateSize();
+            leafletMapRef.current?.invalidateSize();
           });
         }
       } catch (error) {
@@ -200,18 +156,15 @@ export default function MapDisplay({ setCurrentSensor }: MapDisplayProps) {
     };
 
     fetchSensors();
-  }, [refreshSensorList]); // Dependency on refreshSensorList triggers a re-fetch
+  }, [refreshSensorList]);
 
   useEffect(() => {
     if (!leafletMapRef.current) return;
-
     const mapEl = leafletMapRef.current.getContainer();
     mapEl.style.cursor = clickMode ? "crosshair" : "";
   }, [clickMode]);
 
   useEffect(() => {
-    if (!leafletMapRef.current) return;
-
     clickAddSensorRef.current = clickAddSensor;
   }, [clickAddSensor]);
 
@@ -228,26 +181,66 @@ export default function MapDisplay({ setCurrentSensor }: MapDisplayProps) {
     }
   }, [sensorAddSuccess]);
 
+  useEffect(() => {
+    const socket = new WebSocket("ws://localhost:5000");
+
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (message.type === "location" && message.data) {
+        const { lat, long } = message.data;
+        const newPoint = L.latLng(lat, long);
+        animateDroneTo(newPoint);
+      }
+    };
+
+    return () => socket.close();
+  }, []);
+
+  const animateDroneTo = (to: L.LatLng) => {
+    const marker = droneRef.current;
+    if (!marker) return;
+
+    const from = marker.getLatLng();
+    const steps = 60;
+    const duration = 1000;
+    const stepTime = duration / steps;
+    let step = 0;
+
+    const move = () => {
+      if (step >= steps) {
+        marker.setLatLng(to);
+        pathRef.current.push(to);
+        polylineRef.current?.setLatLngs(pathRef.current);
+        return;
+      }
+
+      const lat = from.lat + ((to.lat - from.lat) * step) / steps;
+      const lng = from.lng + ((to.lng - from.lng) * step) / steps;
+      const next = new L.LatLng(lat, lng);
+
+      marker.setLatLng(next);
+      step++;
+      setTimeout(move, stepTime);
+    };
+
+    move();
+  };
+
   return (
-    <div className="w-full h-full relative rounded-lg border shadow ">
-      {/* Floating Icon Button */}
+    <div className="w-full h-full relative rounded-lg border shadow">
       <div className="absolute z-[1000] top-4 right-4 flex flex-row gap-4">
         <button
-          className=" bg-white px-4 py-2 rounded-lg shadow hover:bg-gray-100 border border-gray-300"
+          className="bg-white px-4 py-2 rounded-lg shadow hover:bg-gray-100 border border-gray-300"
           onClick={() => {
-            setClickMode((prev) => {
-              const newState = true;
-              clickModeRef.current = newState;
-              return newState;
-            });
+            setClickMode(true);
+            clickModeRef.current = true;
             setClickAddSensor(true);
           }}
-          title={clickAddSensor ? "Disable Add Sensor" : "Enable Add Sensor"}
         >
           Add Sensor
         </button>
         <button
-          className=" bg-white p-2 rounded-full shadow hover:bg-gray-100 border border-gray-300"
+          className="bg-white p-2 rounded-full shadow hover:bg-gray-100 border border-gray-300"
           onClick={() => {
             setClickMode((prev) => {
               const newState = !prev;
@@ -255,7 +248,6 @@ export default function MapDisplay({ setCurrentSensor }: MapDisplayProps) {
               return newState;
             });
           }}
-          title={clickMode ? "Disable LatLng Picker" : "Enable LatLng Picker"}
         >
           <img
             src="/icons/pin.png"
@@ -264,6 +256,7 @@ export default function MapDisplay({ setCurrentSensor }: MapDisplayProps) {
           />
         </button>
       </div>
+
       {clickAddSensor && (
         <div className="absolute z-[1000] top-4 left-4">
           <SensorSettings
@@ -286,7 +279,6 @@ export default function MapDisplay({ setCurrentSensor }: MapDisplayProps) {
         </div>
       )}
 
-      {/* Map container */}
       <div
         ref={mapRef}
         id="leaflet-map"
