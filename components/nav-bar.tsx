@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import Image from "next/image"; // Import Image component
+import HydPolice from "@/public/hydpolice.png";
 
 export function NavBar() {
   const pathname = usePathname();
@@ -23,7 +25,6 @@ export function NavBar() {
         setIsMenuOpen(false);
       }
     };
-
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, [isMenuOpen]);
@@ -42,11 +43,10 @@ export function NavBar() {
 
   const navLinks = [
     { href: "/", label: "Dashboard" },
-    // { href: "/settings", label: "Settings" },
+    { href: "/alert-history", label: "Alert History" }, // Corrected href to match new page
     { href: "/AreaManagement", label: "Area" },
     { href: "/DroneManagement", label: "Drone" },
     { href: "/SensorManagement", label: "Sensor" },
-    // { href: "/TelemetryDashboard", label: "Telemetry" },
   ];
 
   return (
@@ -54,10 +54,18 @@ export function NavBar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <div className="flex-shrink-0 flex items-center">
-              <h1 className="text-xl font-bold">Drone Management</h1>
+            <div className="flex-shrink-0 flex items-center space-x-2">
+              {" "}
+              {/* Added space-x-2 for gap */}
+              <Image
+                src={HydPolice} // Placeholder for Hyderabad Police logo
+                alt="Hyderabad Police Logo"
+                width={32}
+                height={32}
+                className="rounded-full" // Optional: make it round
+              />
+              <h1 className="text-xl font-bold">Rudrakshak</h1>
             </div>
-
             {/* Desktop Navigation */}
             <div className="hidden md:ml-10 md:flex md:items-center md:space-x-4">
               {navLinks.map((link) => (
@@ -76,7 +84,6 @@ export function NavBar() {
               ))}
             </div>
           </div>
-
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center">
             <button
@@ -100,7 +107,6 @@ export function NavBar() {
           </div>
         </div>
       </div>
-
       {/* Mobile menu */}
       <div
         className={cn(
@@ -128,7 +134,6 @@ export function NavBar() {
           ))}
         </div>
       </div>
-
       {/* Overlay when mobile menu is open */}
       {isMenuOpen && (
         <div
