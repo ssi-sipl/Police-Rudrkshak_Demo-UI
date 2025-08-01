@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -102,16 +101,13 @@ export default function AlertHistoryPage() {
     sourceFilter: SourceFilter
   ): Alert[] => {
     let filtered = alerts;
-
     // Filter by source first
     if (sourceFilter !== "all") {
       filtered = filtered.filter((alert) => alert.source === sourceFilter);
     }
-
     // Then filter by date
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
     switch (dateFilter) {
       case "today":
         return filtered.filter((alert) => {
@@ -161,22 +157,24 @@ export default function AlertHistoryPage() {
   const getAlertIcon = (type: string) => {
     switch (type) {
       case "person":
-        return <User className="h-5 w-5" />;
+        return <User className="h-5 w-5 text-detailing-outline-black" />;
       case "animal":
-        return <Dog className="h-5 w-5" />;
+        return <Dog className="h-5 w-5 text-detailing-outline-black" />;
       default:
-        return <AlertTriangle className="h-5 w-5" />;
+        return (
+          <AlertTriangle className="h-5 w-5 text-detailing-outline-black" />
+        );
     }
   };
 
   const getAlertColor = (type: string) => {
     switch (type) {
       case "person":
-        return "bg-red-500";
+        return "bg-police-band-red";
       case "animal":
-        return "bg-orange-500";
+        return "bg-emblem-wreath-golden-yellow";
       default:
-        return "bg-yellow-500";
+        return "bg-emblem-wreath-golden-yellow";
     }
   };
 
@@ -194,11 +192,11 @@ export default function AlertHistoryPage() {
   const getSourceColor = (source?: string) => {
     switch (source) {
       case "onboard":
-        return "bg-blue-100 text-blue-800";
+        return "bg-shield-background-navy-blue text-text-white-custom";
       case "offboard":
-        return "bg-green-100 text-green-800";
+        return "bg-emblem-wreath-golden-yellow text-detailing-outline-black";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-uniform-dark-navy-blue text-text-white-custom";
     }
   };
 
@@ -250,17 +248,17 @@ export default function AlertHistoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-uniform-dark-navy-blue p-4">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Camera className="h-8 w-8 text-blue-600" />
+            <Camera className="h-8 w-8 text-emblem-wreath-golden-yellow" />
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-text-white-custom">
                 Alert History
               </h1>
-              <p className="text-gray-600">
+              <p className="text-text-white-custom">
                 Review past detection alerts from your drone surveillance
                 system.
               </p>
@@ -271,6 +269,7 @@ export default function AlertHistoryPage() {
             variant="outline"
             size="sm"
             disabled={isLoading}
+            className="border-text-white-custom text-text-white-custom hover:bg-shield-background-navy-blue hover:text-text-white-custom bg-transparent"
           >
             <RefreshCw
               className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
@@ -278,26 +277,25 @@ export default function AlertHistoryPage() {
             Refresh
           </Button>
         </div>
-
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
+          <Card className="bg-text-white-custom text-detailing-outline-black">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Total Alerts ({getDateFilterLabel(dateFilter)})
               </CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              <AlertTriangle className="h-4 w-4 text-detailing-outline-black" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{filteredAlerts.length}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-text-white-custom text-detailing-outline-black">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Person Detections
               </CardTitle>
-              <User className="h-4 w-4 text-muted-foreground" />
+              <User className="h-4 w-4 text-detailing-outline-black" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -308,12 +306,12 @@ export default function AlertHistoryPage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-text-white-custom text-detailing-outline-black">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Animal Detections
               </CardTitle>
-              <Dog className="h-4 w-4 text-muted-foreground" />
+              <Dog className="h-4 w-4 text-detailing-outline-black" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -324,12 +322,12 @@ export default function AlertHistoryPage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-text-white-custom text-detailing-outline-black">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Onboard vs Offboard
               </CardTitle>
-              <Plane className="h-4 w-4 text-muted-foreground" />
+              <Plane className="h-4 w-4 text-detailing-outline-black" />
             </CardHeader>
             <CardContent>
               <div className="text-sm space-y-1">
@@ -357,9 +355,8 @@ export default function AlertHistoryPage() {
             </CardContent>
           </Card>
         </div>
-
         {/* Alert History List */}
-        <Card>
+        <Card className="bg-text-white-custom text-detailing-outline-black">
           <CardHeader>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
@@ -371,12 +368,12 @@ export default function AlertHistoryPage() {
               </div>
               <div className="flex items-center space-x-2 flex-wrap gap-2">
                 <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <Calendar className="h-4 w-4 text-detailing-outline-black" />
                   <Select
                     value={dateFilter}
                     onValueChange={(value: DateFilter) => setDateFilter(value)}
                   >
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="w-40 border-detailing-outline-black text-detailing-outline-black bg-text-white-custom">
                       <SelectValue placeholder="Select Date Range" />
                     </SelectTrigger>
                     <SelectContent>
@@ -389,14 +386,14 @@ export default function AlertHistoryPage() {
                   </Select>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Plane className="h-4 w-4 text-muted-foreground" />
+                  <Plane className="h-4 w-4 text-detailing-outline-black" />
                   <Select
                     value={sourceFilter}
                     onValueChange={(value: SourceFilter) =>
                       setSourceFilter(value)
                     }
                   >
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="w-40 border-detailing-outline-black text-detailing-outline-black bg-text-white-custom">
                       <SelectValue placeholder="Select Source" />
                     </SelectTrigger>
                     <SelectContent>
@@ -412,12 +409,12 @@ export default function AlertHistoryPage() {
           <CardContent>
             <ScrollArea className="h-96">
               {isLoading ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-detailing-outline-black">
                   <RefreshCw className="h-12 w-12 mx-auto mb-4 opacity-50 animate-spin" />
                   <p>Loading alerts...</p>
                 </div>
               ) : filteredAlerts.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-detailing-outline-black">
                   <Camera className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>
                     No alerts found for{" "}
@@ -440,7 +437,7 @@ export default function AlertHistoryPage() {
                       className="block"
                     >
                       <div
-                        className="flex space-x-4 p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+                        className="flex space-x-4 p-3 hover:bg-uniform-dark-navy-blue hover:text-text-white-custom rounded-lg transition-colors cursor-pointer"
                         onClick={() => handleAlertClick(alert)}
                       >
                         <div
@@ -471,9 +468,9 @@ export default function AlertHistoryPage() {
                                   </span>
                                 </Badge>
                               )}
-                              <ExternalLink className="h-4 w-4 text-gray-400" />
+                              <ExternalLink className="h-4 w-4 text-detailing-outline-black" />
                             </div>
-                            <div className="flex items-center space-x-4 text-xs text-gray-500">
+                            <div className="flex items-center space-x-4 text-xs text-detailing-outline-black">
                               <span>{formatTimestamp(alert.timestamp)}</span>
                               {alert.confidence && (
                                 <span>
@@ -484,7 +481,7 @@ export default function AlertHistoryPage() {
                               {alert.drone_id && <span>{alert.drone_id}</span>}
                             </div>
                           </div>
-                          <div className="relative h-24 bg-gray-100 rounded overflow-hidden">
+                          <div className="relative h-24 bg-uniform-dark-navy-blue rounded overflow-hidden">
                             <Image
                               src={
                                 alert.image ||
@@ -497,7 +494,9 @@ export default function AlertHistoryPage() {
                           </div>
                         </div>
                       </div>
-                      {index < filteredAlerts.length - 1 && <Separator />}
+                      {index < filteredAlerts.length - 1 && (
+                        <Separator className="bg-detailing-outline-black" />
+                      )}
                     </a>
                   ))}
                 </div>

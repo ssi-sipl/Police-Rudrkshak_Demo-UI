@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { baseUrl } from "@/lib/config";
 import { DroneDropdown } from "./drone-dropdown";
-import { AreaDropdown } from "./area-dropdown";
 import { latLngToMGRS, mgrsToLatLng } from "@/lib/mgrs"; // ✅ import
+import { RotateCcw } from "lucide-react"; // Add this import
 
 interface Sensor {
   __v: number;
@@ -45,7 +44,10 @@ export function ConfigurationPanel({ currentSensor }: ConfigurationPanelProps) {
   // Update MGRS when lat/lng changes
   useEffect(() => {
     if (latitude && longitude) {
-      const mgrsStr = latLngToMGRS(parseFloat(latitude), parseFloat(longitude));
+      const mgrsStr = latLngToMGRS(
+        Number.parseFloat(latitude),
+        Number.parseFloat(longitude)
+      );
       setGridRef(mgrsStr);
     }
   }, [latitude, longitude]);
@@ -63,17 +65,16 @@ export function ConfigurationPanel({ currentSensor }: ConfigurationPanelProps) {
   useEffect(() => {
     const fetchAreaByDroneId = async () => {
       try {
-        const res = await fetch(`${baseUrl}/drones/drone/${selectedDroneId}`);
+        const res = await fetch(`${baseUrl}/drones/${selectedDroneId}`);
         const data = await res.json();
-
         if (!res.ok) throw new Error(data.message || "Failed to fetch area");
-
+        console.log("Fetched area data:", data);
         setAreaId(data.data.area_id);
       } catch (err) {
+        console.error("Error fetching area by drone ID:", err);
         setAreaId("No Area");
       }
     };
-
     if (selectedDroneId) fetchAreaByDroneId();
   }, [selectedDroneId]);
 
@@ -87,6 +88,14 @@ export function ConfigurationPanel({ currentSensor }: ConfigurationPanelProps) {
         areaId &&
         usbAddress
       ) {
+        console.log("Sending drone with data:", {
+          drone_id: selectedDroneId,
+          area_id: areaId,
+          latitude: Number(latitude),
+          longitude: Number(longitude),
+          altitude: Number(altitude),
+          usb_address: usbAddress,
+        });
         const res = await fetch(`${baseUrl}/drones/send`, {
           method: "POST",
           headers: {
@@ -101,13 +110,9 @@ export function ConfigurationPanel({ currentSensor }: ConfigurationPanelProps) {
             usb_address: usbAddress,
           }),
         });
-
         const result = await res.json();
-
         alert(result.message);
-
         console.log(result);
-
         setLatitude("");
         setLongitude("");
         setAltitude("10");
@@ -135,11 +140,31 @@ export function ConfigurationPanel({ currentSensor }: ConfigurationPanelProps) {
             area_id: areaId,
           }),
         });
-
         const result = await res.json();
-
         alert(result.message);
+        console.log(result);
+      }
+    } catch (error) {
+      console.error("Error dropping payload:", error);
+      alert("Failed to drop payload. Please try again.");
+    }
+  };
 
+  const handleDroneCallback = async () => {
+    try {
+      if (selectedDroneId && areaId) {
+        const res = await fetch(`${baseUrl}/drones/droneCallback`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            drone_id: selectedDroneId,
+            area_id: areaId,
+          }),
+        });
+        const result = await res.json();
+        alert(result.message);
         console.log(result);
       }
     } catch (error) {
@@ -156,15 +181,36 @@ export function ConfigurationPanel({ currentSensor }: ConfigurationPanelProps) {
     }
   };
 
+  const handleResetValues = () => {
+    setLatitude("");
+    setLongitude("");
+    setAltitude("10");
+    setAreaId("");
+    setSelectedDroneId(undefined);
+    setUsbAddress("");
+    setGridRef("");
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Deploy Drone</CardTitle>
+    <Card className="bg-text-white-custom text-detailing-outline-black">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle>
+          {" "}
+          Deploy Drone <span className="text-sm">(డ్రోన్ పంపించండి)</span>
+        </CardTitle>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleResetValues}
+          aria-label="Reset values"
+        >
+          <RotateCcw className="h-4 w-4" />
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div className="grid gap-2">
-            <Label htmlFor="latitude">Latitude</Label>
+            <Label htmlFor="latitude">Latitude (అక్షాంశం)</Label>
             <Input
               id="latitude"
               type="number"
@@ -173,9 +219,8 @@ export function ConfigurationPanel({ currentSensor }: ConfigurationPanelProps) {
               placeholder="Enter latitude"
             />
           </div>
-
           <div className="grid gap-2">
-            <Label htmlFor="longitude">Longitude</Label>
+            <Label htmlFor="longitude">Longitude (రేఖాంశం)</Label>
             <Input
               id="longitude"
               type="number"
@@ -184,7 +229,6 @@ export function ConfigurationPanel({ currentSensor }: ConfigurationPanelProps) {
               placeholder="Enter longitude"
             />
           </div>
-
           <div className="grid gap-2">
             <Label htmlFor="gridRef">Grid Reference (MGRS)</Label>
             <Input
@@ -195,9 +239,8 @@ export function ConfigurationPanel({ currentSensor }: ConfigurationPanelProps) {
               placeholder="e.g. 43QED1234567890"
             />
           </div>
-
           <div className="grid gap-2">
-            <Label htmlFor="altitude">Altitude</Label>
+            <Label htmlFor="altitude">Altitude (ఎత్తు)</Label>
             <Input
               id="altitude"
               type="number"
@@ -206,15 +249,13 @@ export function ConfigurationPanel({ currentSensor }: ConfigurationPanelProps) {
               placeholder="Enter altitude"
             />
           </div>
-
           <div className="grid gap-1">
-            <Label htmlFor="droneID">Drone ID</Label>
+            <Label htmlFor="droneID">Select Drone (డ్రోన్ ఎంచుకోండి)</Label>
             <DroneDropdown
               selectedDroneId={selectedDroneId ?? null}
               setSelectedDroneId={(id) => setSelectedDroneId(id)}
             />
           </div>
-
           <div className="grid gap-2">
             <Label htmlFor="usb_address">USB Address</Label>
             <Input
@@ -225,41 +266,44 @@ export function ConfigurationPanel({ currentSensor }: ConfigurationPanelProps) {
               placeholder="Enter USB address"
             />
           </div>
-
-          <div className="grid gap-1">
-            <Label className="text-gray-500" htmlFor="areaID">
-              Area ID (Auto)
-            </Label>
-
-            <AreaDropdown
-              selectedAreaId={areaId}
-              setSelectedAreaId={() => {}}
-              disabled={true}
-            />
-          </div>
-
+          {/* <div className="grid gap-1">
+          <Label className="text-detailing-outline-black" htmlFor="areaID">
+            Area ID (Auto)
+          </Label>
+          <AreaDropdown
+            selectedAreaId={areaId}
+            setSelectedAreaId={() => {}}
+            disabled={true}
+          />
+        </div> */}
           <Button
-            className="w-full"
+            className="w-full bg-shield-background-navy-blue hover:bg-uniform-dark-navy-blue text-text-white-custom"
             onClick={handleSendDrone}
             disabled={!selectedDroneId}
           >
-            Send Drone
+            Send Drone / డ్రోన్ పంపండి
           </Button>
-
           <Button
-            className="w-full bg-green-500 hover:bg-green-600 transition-all ease-in-out"
+            className="w-full bg-green-500 hover:bg-green-500/90 text-detailing-outline-black transition-all ease-in-out"
             onClick={handleDropPayload}
             disabled={!selectedDroneId}
           >
-            Patrol
+            Patrol / పర్యవేక్షణ
           </Button>
-          {/* <Button
-            className="w-full bg-cyan-500 hover:bg-cyan-600 transition-all ease-in-out"
-            onClick={handleDroneView}
+          <Button
+            className="w-full bg-emblem-wreath-golden-yellow hover:bg-emblem-wreath-golden-yellow/90 text-detailing-outline-black transition-all ease-in-out"
+            onClick={handleDroneCallback}
             disabled={!selectedDroneId}
           >
-            Drone View
-          </Button> */}
+            Drone Callback (డ్రోన్‌ను తిరిగి పిలించండి)
+          </Button>
+          {/* <Button
+          className="w-full bg-cyan-500 hover:bg-cyan-600 transition-all ease-in-out"
+          onClick={handleDroneView}
+          disabled={!selectedDroneId}
+        >
+          Drone View
+        </Button> */}
         </div>
       </CardContent>
     </Card>

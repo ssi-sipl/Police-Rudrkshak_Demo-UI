@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -50,22 +49,28 @@ export function NavBar() {
   ];
 
   return (
-    <nav className="border-b bg-white z-[10000]">
+    <nav className="border-b border-detailing-outline-black bg-shield-background-navy-blue z-[10000]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <div className="flex-shrink-0 flex items-center space-x-2">
+            <div className="flex-shrink-0 flex items-center space-x-3 ">
               {" "}
               {/* Added space-x-2 for gap */}
               <Image
-                src={HydPolice} // Placeholder for Hyderabad Police logo
+                src={HydPolice || "/placeholder.svg"} // Placeholder for Hyderabad Police logo
                 alt="Hyderabad Police Logo"
                 width={32}
                 height={32}
                 className="rounded-full" // Optional: make it round
               />
-              <h1 className="text-xl font-bold">Rudrakshak</h1>
+              <div className="text-text-white-custom flex flex-col items-start">
+                <h1 className="text-xl font-bold text-text-white-custom">
+                  Hyderabad Police
+                </h1>
+                <p className="text-xs">Drone Survelliance System</p>
+              </div>
             </div>
+
             {/* Desktop Navigation */}
             <div className="hidden md:ml-10 md:flex md:items-center md:space-x-4">
               {navLinks.map((link) => (
@@ -75,8 +80,8 @@ export function NavBar() {
                   className={cn(
                     "px-3 py-2 rounded-md text-sm font-medium transition-colors",
                     pathname === link.href
-                      ? "bg-gray-900 text-white"
-                      : "text-gray-700 hover:bg-gray-100"
+                      ? "bg-police-band-red text-text-white-custom"
+                      : "text-text-white-custom hover:bg-uniform-dark-navy-blue"
                   )}
                 >
                   {link.label}
@@ -88,7 +93,7 @@ export function NavBar() {
           <div className="md:hidden flex items-center">
             <button
               type="button"
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gray-500"
+              className="inline-flex items-center justify-center p-2 rounded-md text-text-white-custom hover:text-emblem-wreath-golden-yellow hover:bg-uniform-dark-navy-blue focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emblem-wreath-golden-yellow"
               aria-controls="mobile-menu"
               aria-expanded={isMenuOpen}
               onClick={(e) => {
@@ -110,7 +115,7 @@ export function NavBar() {
       {/* Mobile menu */}
       <div
         className={cn(
-          "md:hidden fixed inset-0 z-50 bg-white transform transition-transform ease-in-out duration-300",
+          "md:hidden fixed inset-0 z-50 bg-shield-background-navy-blue transform transition-transform ease-in-out duration-300",
           isMenuOpen ? "translate-x-0" : "translate-x-full"
         )}
         id="mobile-menu"
@@ -123,10 +128,10 @@ export function NavBar() {
               key={link.href}
               href={link.href}
               className={cn(
-                "block px-3 py-4 rounded-md text-base font-medium border-b border-gray-100",
+                "block px-3 py-4 rounded-md text-base font-medium border-b border-detailing-outline-black",
                 pathname === link.href
-                  ? "bg-gray-900 text-white"
-                  : "text-gray-700 hover:bg-gray-100"
+                  ? "bg-police-band-red text-text-white-custom"
+                  : "text-text-white-custom hover:bg-uniform-dark-navy-blue"
               )}
             >
               {link.label}

@@ -25,7 +25,8 @@ export default function RootLayout({
           <div className="min-h-screen flex flex-col">
             {/* Navbar / Sidebar */}
             <NavBar />
-            <main className="flex-1">{children}</main>
+            {/* Main content area with consistent background */}
+            <main className="flex-1 bg-uniform-dark-navy-blue">{children}</main>
           </div>
         </WebSocketProvider>
       </body>
