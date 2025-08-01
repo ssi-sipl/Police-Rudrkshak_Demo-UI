@@ -104,6 +104,7 @@ export default function AreaManagement() {
   const handleDelete = async (id: string) => {
     try {
       await axios.post(`${baseUrl}/areas/delete/${id}`);
+      // console.log(`${baseUrl}/areas/delete/${id}`);
       fetchAreas();
     } catch (err) {
       console.error("Error deleting area", err);
@@ -197,7 +198,7 @@ export default function AreaManagement() {
                     )}
                   </td>
                   <td className="p-2 md:p-3 border border-gray-200">
-                    {area.drones ? area.drones.length : 0}
+                    {area._count.drones || 0}
                   </td>
                   <td className="p-2 md:p-3 border border-gray-200">
                     <div className="flex flex-wrap gap-2">
@@ -233,7 +234,7 @@ export default function AreaManagement() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleDelete(area._id)}
+                            onClick={() => handleDelete(area.id)}
                             className="p-1 md:p-2"
                           >
                             <Trash2 className="w-3 h-3 md:w-4 md:h-4" />

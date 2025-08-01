@@ -251,7 +251,7 @@ export function ConfigurationPanel({ currentSensor }: ConfigurationPanelProps) {
             onClick={handleDropPayload}
             disabled={!selectedDroneId}
           >
-            Drop Payload
+            Patrol
           </Button>
           {/* <Button
             className="w-full bg-cyan-500 hover:bg-cyan-600 transition-all ease-in-out"
