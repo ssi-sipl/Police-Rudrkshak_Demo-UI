@@ -37,12 +37,23 @@ export default function MapDisplay({ setCurrentSensor }: MapDisplayProps) {
   const [sensorAddSuccess, setSensorAddSuccess] = useState(false);
   const [refreshSensorList, setRefreshSensorList] = useState(false);
 
-  const DEFAULT_LAT = 32.7976667;
-  const DEFAULT_LNG = 74.9077222;
+  // const DEFAULT_LAT = 32.7976667;
+  // const DEFAULT_LNG = 74.9077222;
+
+  // const bounds: L.LatLngBoundsLiteral = [
+  //   [32.808829, 74.890582],
+  //   [32.770696, 74.928948],
+  // ];
+
+  const DEFAULT_LAT = 17.451264;
+  const DEFAULT_LNG = 78.370959;
+
+  const DEFAULT_DRONE_LAT = 17.451264;
+  const DEFAULT_DRONE_LNG = 78.370959;
 
   const bounds: L.LatLngBoundsLiteral = [
-    [32.808829, 74.890582],
-    [32.770696, 74.928948],
+    [17.502134, 78.420223],
+    [17.420713, 78.312621],
   ];
 
   const sensorIcon = L.icon({
@@ -78,7 +89,7 @@ export default function MapDisplay({ setCurrentSensor }: MapDisplayProps) {
               maxBoundsViscosity: 1.0,
             });
 
-            L.tileLayer("/jammu/{z}/{x}/{y}.jpg", {
+            L.tileLayer("/hyd/{z}/{x}/{y}.jpg", {
               tileSize: 256,
               noWrap: true,
               bounds: bounds,
@@ -89,9 +100,12 @@ export default function MapDisplay({ setCurrentSensor }: MapDisplayProps) {
             leafletMapRef.current = map;
 
             //set drone default coordinates
-            const droneMarker = L.marker([DEFAULT_LAT, DEFAULT_LNG], {
-              icon: droneIcon,
-            }).addTo(map);
+            const droneMarker = L.marker(
+              [DEFAULT_DRONE_LAT, DEFAULT_DRONE_LNG],
+              {
+                icon: droneIcon,
+              }
+            ).addTo(map);
 
             droneRef.current = droneMarker;
 
