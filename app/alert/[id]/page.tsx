@@ -60,10 +60,10 @@ export default function AlertDetailPage() {
           };
           setAlert(alertData);
         } else {
-          console.error("Alert not found");
+          console.log("Alert not found");
         }
       } catch (error) {
-        console.error("Error fetching alert:", error);
+        console.log("Error fetching alert:", error);
       } finally {
         setLoading(false);
       }
