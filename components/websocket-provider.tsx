@@ -26,13 +26,25 @@ interface DroneLocation {
   long: number;
 }
 
+interface Session {
+  id: number;
+  name: string | null;
+  startedAt: string;
+  endedAt: string | null;
+}
+
 type SourceFilter = "all" | "onboard" | "offboard";
 type ProcessingMode = "detection" | "facerecognition";
 
 interface WebSocketContextType {
+  activeSession: Session | null;
+  isLoadingSession: boolean;
+  startSession: (name: string) => Promise<void>;
+  stopSession: () => Promise<void>;
+  checkActiveSession: () => Promise<void>;
   currentAlert: Alert | null;
   setCurrentAlert: (alert: Alert | null) => void;
-  currentLocation: DroneLocation | null; // Added for drone location
+  currentLocation: DroneLocation | null;
   isConnected: boolean;
   connectionStatus: "connecting" | "connected" | "disconnected";
   sourceFilter: SourceFilter;
@@ -63,10 +75,13 @@ const WebSocketContext = createContext<WebSocketContextType | undefined>(
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  // Session state
+  const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [currentAlert, setCurrentAlert] = useState<Alert | null>(null);
   const [currentLocation, setCurrentLocation] = useState<DroneLocation | null>(
     null
-  ); // New state for drone location
+  );
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "connected" | "disconnected"
@@ -84,12 +99,18 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   const alertBatchRef = useRef<Alert[]>([]);
   const batchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Refs to hold the latest state values for WebSocket event handlers
   const isPausedRef = useRef(isPaused);
   const sourceFilterRef = useRef(sourceFilter);
-  const setCurrentAlertRef = useRef(setCurrentAlert); // Ref for setCurrentAlert
+  const setCurrentAlertRef = useRef(setCurrentAlert);
 
-  // Update refs whenever the state changes
+  // Fixed API URLs to remove double /api
+  const API_BASE_URL = "http://localhost:5000/api";
+  const WS_URL = "ws://localhost:5000";
+
+  useEffect(() => {
+    checkActiveSession();
+  }, []);
+
   useEffect(() => {
     isPausedRef.current = isPaused;
   }, [isPaused]);
@@ -101,9 +122,6 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     setCurrentAlertRef.current = setCurrentAlert;
   }, [setCurrentAlert]);
-
-  const API_BASE_URL = "http://localhost:5000/api";
-  const WS_URL = "ws://localhost:5000";
 
   // WebSocket connection management
   useEffect(() => {
@@ -147,18 +165,17 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
             };
             alertBatchRef.current.push(newAlert);
 
-            // Use refs to access the latest state values
             if (
               !isPausedRef.current &&
               (sourceFilterRef.current === "all" ||
                 sourceFilterRef.current === message.source)
             ) {
-              setCurrentAlertRef.current(newAlert); // Use ref for setCurrentAlert
+              setCurrentAlertRef.current(newAlert);
               setLastAlertTime(new Date());
               setTimeout(() => {
                 setCurrentAlertRef.current((prev) =>
                   prev?.id === newAlert.id ? null : prev
-                ); // Use ref
+                );
               }, 10000);
             }
 
@@ -172,10 +189,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
               }
             }, 2000);
           } else if (message.type === "location" && message.data) {
-            // Handle drone location messages
             const { lat, long } = message.data;
             setCurrentLocation({ lat, long });
-            // console.log("Received drone location:", { lat, long }); // For debugging
           }
         } catch (error) {
           console.error("Error parsing WebSocket message:", error);
@@ -186,7 +201,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log("WebSocket disconnected");
         setIsConnected(false);
         setConnectionStatus("disconnected");
-        setTimeout(connectWebSocket, 3000); // Attempt to reconnect
+        setTimeout(connectWebSocket, 3000);
       };
 
       ws.onerror = (error) => {
@@ -200,15 +215,14 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
-        wsRef.current = null; // Clear the ref
+        wsRef.current = null;
       }
       if (batchTimeoutRef.current) {
         clearTimeout(batchTimeoutRef.current);
       }
     };
-  }, []); // Empty dependency array: runs only once on mount
+  }, []);
 
-  // Clear current alert if it doesn't match the new source filter
   useEffect(() => {
     if (
       currentAlert &&
@@ -217,9 +231,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     ) {
       setCurrentAlert(null);
     }
-  }, [sourceFilter, currentAlert, setCurrentAlert]); // setCurrentAlert is a dependency here because it's used directly
+  }, [sourceFilter, currentAlert, setCurrentAlert]);
 
-  // Helper functions (moved from LiveAlertDisplay)
   const getAlertIcon = useCallback((type: string) => {
     switch (type) {
       case "person":
@@ -274,6 +287,126 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   }, []);
 
+  const checkActiveSession = async () => {
+    setIsLoadingSession(true);
+    try {
+      // Fixed URL to remove double /api
+      const response = await fetch(`${API_BASE_URL}/sessions/active`);
+
+      if (response.ok) {
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const result = await response.json();
+          if (result.status && result.data) {
+            setActiveSession(result.data);
+            setIsConnected(true);
+            setConnectionStatus("connected");
+            setAllModesOff(false);
+          } else {
+            setActiveSession(null);
+            setIsConnected(false);
+            setConnectionStatus("disconnected");
+            setAllModesOff(true);
+          }
+        } else {
+          console.log("API returned non-JSON response:", await response.text());
+          setActiveSession(null);
+          setIsConnected(false);
+          setConnectionStatus("disconnected");
+          setAllModesOff(true);
+        }
+      } else {
+        console.log("API request failed with status:", response.status);
+        setActiveSession(null);
+        setIsConnected(false);
+        setConnectionStatus("disconnected");
+        setAllModesOff(true);
+      }
+    } catch (error) {
+      console.error("Failed to check active session:", error);
+      setActiveSession(null);
+      setIsConnected(false);
+      setConnectionStatus("disconnected");
+      setAllModesOff(true);
+    } finally {
+      setIsLoadingSession(false);
+    }
+  };
+
+  const startSession = async (name: string) => {
+    try {
+      // Fixed URL to remove double /api
+      const response = await fetch(`${API_BASE_URL}/sessions/start`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name }),
+      });
+
+      if (response.ok) {
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const result = await response.json();
+          if (result.status && result.data) {
+            setActiveSession(result.data);
+            setIsConnected(true);
+            setConnectionStatus("connected");
+            setAllModesOff(false);
+            setCurrentMode("detection");
+          }
+        } else {
+          console.log(
+            "Start session API returned non-JSON response:",
+            await response.text()
+          );
+        }
+      } else {
+        console.log(
+          "Failed to start session - response not ok:",
+          response.status
+        );
+      }
+    } catch (error) {
+      console.error("Failed to start session:", error);
+    }
+  };
+
+  const stopSession = async () => {
+    try {
+      // Fixed URL to remove double /api
+      const response = await fetch(`${API_BASE_URL}/sessions/stop`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const result = await response.json();
+          if (result.status) {
+            setActiveSession(null);
+            setIsConnected(false);
+            setConnectionStatus("disconnected");
+            setAllModesOff(true);
+            setCurrentAlert(null);
+          }
+        } else {
+          console.log(
+            "Stop session API returned non-JSON response:",
+            await response.text()
+          );
+        }
+      } else {
+        console.log(
+          "Failed to stop session - response not ok:",
+          response.status
+        );
+      }
+    } catch (error) {
+      console.error("Failed to stop session:", error);
+    }
+  };
+
   const formatConfidence = useCallback((confidence?: number) => {
     if (!confidence) return null;
     const percentage =
@@ -310,7 +443,6 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
       console.warn(
         "WebSocket not ready for simulation, directly setting current alert."
       );
-      // Fallback if WebSocket isn't connected or onmessage isn't set
       if (
         !isPausedRef.current &&
         (sourceFilterRef.current === "all" ||
@@ -322,7 +454,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       setAlertCount((prev) => prev + 1);
     }
-  }, []); // No dependencies related to isPaused or sourceFilter state directly
+  }, []);
 
   const switchMode = useCallback(
     async (newMode: ProcessingMode) => {
@@ -338,11 +470,12 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
           body: JSON.stringify({ action: "on", drone_id: droneId }),
         });
         if (!response.ok) {
-          throw new Error(`Failed to switch to ${newMode} mode`);
+          console.error(`Failed to switch to ${newMode} mode`);
+        } else {
+          setCurrentMode(newMode);
+          setAllModesOff(false);
+          console.log(`Successfully switched to ${newMode} mode`);
         }
-        setCurrentMode(newMode);
-        setAllModesOff(false);
-        console.log(`Successfully switched to ${newMode} mode`);
       } catch (error) {
         console.error("Error switching mode:", error);
       } finally {
@@ -372,10 +505,11 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       );
       if (!detectionResponse.ok || !frResponse.ok) {
-        throw new Error("Failed to turn off all modes");
+        console.error("Failed to turn off all modes");
+      } else {
+        setAllModesOff(true);
+        console.log("Successfully turned off all modes");
       }
-      setAllModesOff(true);
-      console.log("Successfully turned off all modes");
     } catch (error) {
       console.error("Error turning off all modes:", error);
     } finally {
@@ -385,9 +519,14 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const contextValue = React.useMemo(
     () => ({
+      activeSession,
+      isLoadingSession,
+      startSession,
+      stopSession,
+      checkActiveSession,
       currentAlert,
       setCurrentAlert,
-      currentLocation, // Added to context
+      currentLocation,
       isConnected,
       connectionStatus,
       sourceFilter,
@@ -411,9 +550,11 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
       formatConfidence,
     }),
     [
+      activeSession,
+      isLoadingSession,
       currentAlert,
       setCurrentAlert,
-      currentLocation, // Added to dependencies
+      currentLocation,
       isConnected,
       connectionStatus,
       sourceFilter,
@@ -448,7 +589,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
 export const useWebSocket = () => {
   const context = useContext(WebSocketContext);
   if (context === undefined) {
-    throw new Error("useWebSocket must be used within a WebSocketProvider");
+    console.error("useWebSocket must be used within a WebSocketProvider");
+    return {} as WebSocketContextType;
   }
   return context;
 };

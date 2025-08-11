@@ -1,32 +1,30 @@
-"use client"
+"use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react"
+import { createContext, useContext, useState, type ReactNode } from "react";
 
 type Area = {
-  id: string
-  name: string
-}
+  id: string;
+  name: string;
+};
 
 type AreaContextType = {
-  areas: Area[]
-  selectedAreaId: string | null
-  area: Area
-  addArea: (area: Area) => void
-  setSelectedAreaId: (id: string | null) => void
-  updateArea: (area: Area) => void
-}
+  areas: Area[];
+  selectedAreaId: string | null;
+  area: Area;
+  addArea: (area: Area) => void;
+  setSelectedAreaId: (id: string | null) => void;
+  updateArea: (area: Area) => void;
+};
 
-const AreaContext = createContext<AreaContextType | undefined>(undefined)
+const AreaContext = createContext<AreaContextType | undefined>(undefined);
 
 export function AreaProvider({ children }: { children: ReactNode }) {
-  const [areas, setAreas] = useState<Area[]>([])
-  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null)
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
 
   const addArea = (area: Area) => {
-    setAreas((prev) => [...prev, area])
-  }
-
-  
+    setAreas((prev) => [...prev, area]);
+  };
 
   return (
     <AreaContext.Provider
@@ -41,13 +39,13 @@ export function AreaProvider({ children }: { children: ReactNode }) {
     >
       {children}
     </AreaContext.Provider>
-  )
+  );
 }
 
 export function useAreaContext() {
-  const context = useContext(AreaContext)
+  const context = useContext(AreaContext);
   if (context === undefined) {
-    throw new Error("useAreaContext must be used within a AreaProvider")
+    throw new Error("useAreaContext must be used within a AreaProvider");
   }
-  return context
+  return context;
 }
